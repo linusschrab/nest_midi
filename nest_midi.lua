@@ -52,8 +52,12 @@ synth = nest_ {
                     local note = 59 + params:get("root") + scale[key.x] + 12*octave
                     --local playNote = root * 2^octave * 2^(note/12)
                     --print(music.note_num_to_name(note))
-                    if added then m:note_on(note, 100, 1) --engine.start(id, hz)
-                    elseif removed then m:note_off(note, 100, 1) end--engine.stop(id) end
+                    if params:get("output") == 1 then
+                        if added then m:note_on(note, 100, 1) --engine.start(id, hz)
+                        elseif removed then m:note_off(note, 0, 1) end--engine.stop(id) end
+                    elseif params:get("output") == 2 then
+                        if added then crow.send("ii.wsyn.play_note(".. ((note-48)/12 ..", " .. params:get("wsyn_vel") .. ")")) end
+                    end
                 end
             },
             control_preset = _grid.preset {
@@ -79,7 +83,11 @@ synth = nest_ {
                 x = 9, y = { 2, 8 },
                 action = function(self, value) 
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_1"), math.floor(value * 127), 1)
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_1"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_curve", (value * 10) - 5)
+                    end
                 end --engine.shape(value)
                 
             },
@@ -88,13 +96,21 @@ synth = nest_ {
                 --v = 0.5,
                 action = function(self, value) 
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_2"), math.floor(value * 127), 1) 
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_2"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_ramp", (value * 10) - 5)
+                    end
                 end --engine.timbre(value)
             },
             noise = _grid.control {
                 x = 11, y = { 2, 8 },
                 action = function(self, value) 
-                    m:cc(params:get("cc_3"), math.floor(value * 127), 1) 
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_3"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_fm_index", (value * 10) / 2)
+                    end
                     --print(math.floor(value * 127))
                 end --engine.noise(value)
             },
@@ -103,7 +119,11 @@ synth = nest_ {
                 --range = { 0, 10 },
                 action = function(self, value)
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_4"), math.floor(value * 127), 1) 
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_4"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_fm_env", (value * 10) - 5)
+                    end
                 end --engine.hzLag(value)
             },
             cut = _grid.control {
@@ -112,7 +132,11 @@ synth = nest_ {
                 --value = 8,
                 action = function(self, value) 
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_5"), math.floor(value * 127), 1) 
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_5"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_fm_ratio_num", math.floor(value * 10))
+                    end
                 end --engine.cut(value)
             },
             attack = _grid.control {
@@ -123,7 +147,11 @@ synth = nest_ {
                     --m:cc() --engine.cutAtk(value)
                     --m:cc() --engine.ampAtk(value)
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_6"), math.floor(value * 127), 1)
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_6"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_fm_ratio_den", math.floor(value * 10))
+                    end
                 end
             },
             sustain = _grid.control {
@@ -133,7 +161,11 @@ synth = nest_ {
                     --engine.cutSus(value)
                     --engine.ampSus(value)
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_7"), math.floor(value * 127), 1)
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_7"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_lpg_time", (value * 10) - 5)
+                    end
                 end
             },
             release = _grid.control {
@@ -143,7 +175,12 @@ synth = nest_ {
                 action = function(self, value)
                     --engine.cutDec(value)
                     --print(math.floor(value * 127))
-                    m:cc(params:get("cc_8"), math.floor(value * 127), 1) --engine.ampDec(value)
+                    if params:get("output") == 1 then
+                        m:cc(params:get("cc_8"), math.floor(value * 127), 1)
+                    elseif params:get("output") == 2 then
+                        params:set("wsyn_lpg_symmetry", (value * 10) - 5)
+                    end 
+                    --engine.ampDec(value)
                     --engine.cutRel(value)
                     --engine.ampRel(value)
                     --m:cc(89, math.floor(value * 127), 1)
@@ -152,8 +189,8 @@ synth = nest_ {
         }
     },
     
-    -- delay controls
-    screen = nest_ {
+    -- screen stuff
+    --[[screen = nest_ {
         delay = _txt.enc.control {
             x = 2, y = 8,
             value = 0.5,
@@ -188,24 +225,26 @@ synth = nest_ {
                 --print("rate", rate * dir)
             end
         }
-    }
+    }]]
 }
 
 synth.grid:connect {
     g = grid.connect()
 }
 
-synth.screen:connect {
-    screen = screen,
-    key = key,
-    enc = enc
-}
+--synth.screen:connect {
+--    screen = screen,
+--    key = key,
+--    enc = enc
+--}
 
 function init()
     --delay.init()
     --polysub.params()
     params:add_option("scale", "scale", scales['names'], 1)
     params:add_option("root", "root note", note_list, 1)
+    params:add_option("output", "output", {"midi", "w/syn"}, 1)
+    params:add_group("midi mappings", 8)
     params:add_number("cc_1", "x = 9 -> cc:", 1, 127, 27)
     params:add_number("cc_2", "x = 10 -> cc:", 1, 127, 29)
     params:add_number("cc_3", "x = 11 -> cc:", 1, 127, 23)
@@ -215,9 +254,131 @@ function init()
     params:add_number("cc_7", "x = 15 -> cc:", 1, 127, 87)
     params:add_number("cc_8", "x = 16 -> cc:", 1, 127, 88)
     
+    wsyn_add_params()
+
     synth:load()
     synth:init()
 end
+
+function wsyn_add_params()
+    params:add_group("w/syn",10)
+    params:add {
+      type = "option",
+      id = "wsyn_ar_mode",
+      name = "AR mode",
+      options = {"off", "on"},
+      default = 2,
+      action = function(val) 
+        crow.send("ii.wsyn.ar_mode(".. (val-1) ..")")
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_vel",
+      name = "Velocity",
+      controlspec = controlspec.new(0, 5, "lin", 0, 3, "v"),
+      action = function(val) 
+        pset_wsyn_vel = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_curve",
+      name = "Curve",
+      controlspec = controlspec.new(-5, 5, "lin", 0, 0, "v"),
+      action = function(val) 
+        crow.send("ii.wsyn.curve(" .. val .. ")") 
+        pset_wsyn_curve = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_ramp",
+      name = "Ramp",
+      controlspec = controlspec.new(-5, 5, "lin", 0, 0, "v"),
+      action = function(val) 
+        crow.send("ii.wsyn.ramp(" .. val .. ")") 
+        pset_wsyn_ramp = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_fm_index",
+      name = "FM index",
+      controlspec = controlspec.new(0, 5, "lin", 0, 0, "v"),
+      action = function(val) 
+        crow.send("ii.wsyn.fm_index(" .. val .. ")") 
+        pset_wsyn_fm_index = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_fm_env",
+      name = "FM env",
+      controlspec = controlspec.new(-5, 5, "lin", 0, 0, "v"),
+      action = function(val) 
+        crow.send("ii.wsyn.fm_env(" .. val .. ")") 
+        pset_wsyn_fm_env = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_fm_ratio_num",
+      name = "FM ratio numerator",
+      controlspec = controlspec.new(1, 20, "lin", 1, 2),
+      action = function(val) 
+        crow.send("ii.wsyn.fm_ratio(" .. val .. "," .. params:get("wsyn_fm_ratio_den") .. ")") 
+        pset_wsyn_fm_ratio_num = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_fm_ratio_den",
+      name = "FM ratio denominator",
+      controlspec = controlspec.new(1, 20, "lin", 1, 1),
+      action = function(val) 
+        crow.send("ii.wsyn.fm_ratio(" .. params:get("wsyn_fm_ratio_num") .. "," .. val .. ")") 
+        pset_wsyn_fm_ratio_den = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_lpg_time",
+      name = "LPG time",
+      controlspec = controlspec.new(-5, 5, "lin", 0, 0, "v"),
+      action = function(val) 
+        crow.send("ii.wsyn.lpg_time(" .. val .. ")") 
+        pset_wsyn_lpg_time = val
+      end
+    }
+    params:add {
+      type = "control",
+      id = "wsyn_lpg_symmetry",
+      name = "LPG symmetry",
+      controlspec = controlspec.new(-5, 5, "lin", 0, 0, "v"),
+      action = function(val) 
+        crow.send("ii.wsyn.lpg_symmetry(" .. val .. ")") 
+        pset_wsyn_lpg_symmetry = val
+      end
+    }
+    params:add{
+      type = "trigger",
+      id = "wsyn_init",
+      name = "Init",
+      action = function()
+        params:set("wsyn_curve", pset_wsyn_curve)
+        params:set("wsyn_ramp", pset_wsyn_ramp)
+        params:set("wsyn_fm_index", pset_wsyn_fm_index)
+        params:set("wsyn_fm_env", pset_wsyn_fm_env)
+        params:set("wsyn_fm_ratio_num", pset_wsyn_fm_ratio_num)
+        params:set("wsyn_fm_ratio_den", pset_wsyn_fm_ratio_den)
+        params:set("wsyn_lpg_time", pset_wsyn_lpg_time)
+        params:set("wsyn_lpg_symmetry", pset_wsyn_lpg_symmetry)
+        params:set("wsyn_vel", pset_wsyn_vel)
+      end
+    }
+    params:hide("wsyn_init")
+  end
 
 function cleanup()
     synth:save()
